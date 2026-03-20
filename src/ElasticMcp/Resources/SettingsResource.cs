@@ -23,8 +23,9 @@ public class SettingsResource
         var accessError = guard.ValidateIndexAccess(name);
         if (accessError != null) return accessError;
 
+        var requestConfig = new Elastic.Transport.RequestConfiguration { DisableDirectStreaming = true };
         var response = await client.Indices.GetSettingsAsync(
-            r => r.Indices(name),
+            r => r.Indices(name).RequestConfiguration(requestConfig),
             cancellationToken);
 
         if (!response.IsValidResponse)
@@ -38,6 +39,6 @@ public class SettingsResource
                 JsonSerializer.Deserialize<JsonElement>(responseBytes),
                 new JsonSerializerOptions { WriteIndented = true });
 
-        return JsonSerializer.Serialize(response, new JsonSerializerOptions { WriteIndented = true });
+        return $"{{ \"index\": \"{name}\", \"note\": \"Settings retrieved but could not be serialized\" }}";
     }
 }
