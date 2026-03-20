@@ -174,11 +174,11 @@ The key insight: **ElasticMCP never calls an LLM.** It receives structured tool 
 
 ### Build & Test
 
-```bash
+```powershell
 # Build
 dotnet build ElasticMcp.slnx
 
-# Run unit tests
+# Run unit tests only (no Docker needed)
 dotnet test tests/ElasticMcp.Tests/
 
 # Run integration tests (requires Docker)
@@ -186,6 +186,18 @@ dotnet test tests/ElasticMcp.IntegrationTests/
 
 # Run all tests
 dotnet test ElasticMcp.slnx
+
+# Run a single test class
+dotnet test --filter "FullyQualifiedName~SearchToolTests"
+
+# Full local pipeline (build + unit + integration)
+.\test.ps1
+
+# Unit tests only
+.\test.ps1 -UnitOnly
+
+# With code coverage
+.\test.ps1 -Coverage
 ```
 
 Integration tests use [Testcontainers](https://dotnet.testcontainers.org/) to spin up a real Elasticsearch 9.x instance in Docker — no mocks, no fakes.
