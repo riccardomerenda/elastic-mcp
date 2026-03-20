@@ -12,6 +12,7 @@ public class ElasticMcpOptions
     public string QueryTimeout { get; set; } = "30s";
     public List<string> AllowedIndices { get; set; } = [];
     public List<string> DeniedIndices { get; set; } = [];
+    public List<string> RedactedFields { get; set; } = [];
 }
 
 public class AuthenticationOptions

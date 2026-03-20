@@ -1,8 +1,7 @@
 using System.ComponentModel;
 using System.Text.Json;
 using Elastic.Clients.Elasticsearch;
-using ElasticMcp.Configuration;
-using Microsoft.Extensions.Options;
+using ElasticMcp.Services;
 using ModelContextProtocol.Server;
 
 namespace ElasticMcp.Tools;
@@ -14,15 +13,18 @@ public class SearchTool
     [Description("Perform a full-text search on an Elasticsearch index. Returns matching documents with scores.")]
     public static async Task<string> Search(
         ElasticsearchClient client,
-        IOptions<ElasticMcpOptions> options,
+        SecurityGuard guard,
         [Description("The Elasticsearch index name or pattern (e.g. 'logs-*')")] string index,
         [Description("The search query string (Lucene syntax)")] string query,
         [Description("Number of results to return (default: 10)")] int size = 10,
         [Description("Offset for pagination (default: 0)")] int from = 0,
         CancellationToken cancellationToken = default)
     {
-        var config = options.Value;
-        size = Math.Min(size, config.MaxResultSize);
+        var accessError = guard.ValidateIndexAccess(index);
+        if (accessError != null) return accessError;
+
+        guard.AuditToolCall("search", index, query);
+        size = guard.ClampResultSize(size);
 
         var response = await client.SearchAsync<JsonElement>(s => s
             .Indices(index)
@@ -47,7 +49,7 @@ public class SearchTool
                 id = h.Id,
                 index = h.Index,
                 score = h.Score,
-                source = h.Source
+                source = guard.RedactFields(h.Source)
             })
         };
 

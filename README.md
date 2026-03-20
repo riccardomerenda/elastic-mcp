@@ -84,6 +84,9 @@ Add to `.vscode/mcp.json`:
 |------|-------------|
 | `search` | Full-text search with Lucene query syntax, pagination, and result size limits |
 | `count` | Count documents matching an optional query filter |
+| `aggregate` | Run aggregations — terms, date_histogram, avg, sum, min, max, cardinality |
+| `get_document` | Retrieve a single document by ID |
+| `explain_query` | Show the generated Query DSL without executing it |
 
 ### Resources — read-only context for the AI
 
@@ -91,8 +94,9 @@ Add to `.vscode/mcp.json`:
 |----------|-----|-------------|
 | Cluster Health | `elasticsearch://cluster/health` | Cluster status, node count, shard info |
 | Cluster Indices | `elasticsearch://cluster/indices` | All indices with doc counts and store sizes |
-
-> More tools and resources are coming in v0.2 — see [Roadmap](#roadmap).
+| Index Mapping | `elasticsearch://index/{name}/mapping` | Field names, types, and capabilities |
+| Index Settings | `elasticsearch://index/{name}/settings` | Shards, replicas, analyzers, refresh interval |
+| Index Sample | `elasticsearch://index/{name}/sample` | Sample documents to understand data structure |
 
 ---
 
@@ -112,7 +116,8 @@ ElasticMCP is configured via `appsettings.json` in the project root:
     "MaxResultSize": 100,
     "QueryTimeout": "30s",
     "AllowedIndices": ["logs-*", "documents-*"],
-    "DeniedIndices": [".security-*", ".kibana*"]
+    "DeniedIndices": [".security-*", ".kibana*"],
+    "RedactedFields": ["password", "ssn", "credit_card"]
   }
 }
 ```
@@ -126,6 +131,7 @@ ElasticMCP is configured via `appsettings.json` in the project root:
 | `QueryTimeout` | `30s` | Per-query timeout |
 | `AllowedIndices` | `[]` | Index patterns the AI can access |
 | `DeniedIndices` | `[]` | Index patterns blocked from the AI |
+| `RedactedFields` | `[]` | Field names to strip from results and mappings |
 
 Environment variables override any setting (e.g., `ElasticMcp__Authentication__ApiKey`).
 
@@ -190,9 +196,9 @@ Integration tests use [Testcontainers](https://dotnet.testcontainers.org/) to sp
 src/ElasticMcp/
 ├── Program.cs                 # MCP server entry point (stdio transport)
 ├── Configuration/             # ElasticMcpOptions
-├── Tools/                     # search, count
-├── Resources/                 # cluster health, indices
-└── Services/                  # ES client registration
+├── Tools/                     # search, count, aggregate, get_document, explain_query
+├── Resources/                 # cluster health, indices, mapping, settings, sample
+└── Services/                  # ES client registration, SecurityGuard
 
 tests/
 ├── ElasticMcp.Tests/          # Unit tests
@@ -207,13 +213,9 @@ tests/
 
 Project setup, CI/CD, `search` + `count` tools, cluster health + indices resources, stdio transport, Testcontainers integration tests.
 
-### v0.2 — Core Tools *(next)*
+### v0.2 — Core Tools ✅
 
-- `aggregate` tool (terms, date_histogram, avg, etc.)
-- `get_document` tool (retrieve by ID)
-- `explain_query` tool (show generated DSL without executing)
-- Index mapping, settings, and sample resources
-- SecurityGuard with full guardrails (allowlist/denylist, field redaction, audit logging)
+`aggregate`, `get_document`, `explain_query` tools. Index mapping, settings, and sample resources. SecurityGuard with index allowlist/denylist, field redaction, result size clamping, and audit logging.
 
 ### v0.3 — Semantic Search
 

@@ -11,6 +11,7 @@ builder.Services.Configure<ElasticMcpOptions>(
     builder.Configuration.GetSection(ElasticMcpOptions.SectionName));
 
 builder.Services.AddElasticsearchClient();
+builder.Services.AddSingleton<SecurityGuard>();
 
 builder.Services
     .AddMcpServer(options =>
@@ -18,7 +19,7 @@ builder.Services
         options.ServerInfo = new()
         {
             Name = "ElasticMcp",
-            Version = "0.1.0"
+            Version = "0.2.0"
         };
     })
     .WithStdioServerTransport()
