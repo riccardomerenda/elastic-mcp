@@ -59,6 +59,45 @@ public class ElasticsearchFixture : IAsyncLifetime
         }
 
         await Client.Indices.RefreshAsync("test-logs");
+
+        await SeedVectorDataAsync();
+    }
+
+    private async Task SeedVectorDataAsync()
+    {
+        // Create index with dense_vector mapping
+        await Client.Indices.CreateAsync("test-vectors", c => c
+            .Mappings(m => m
+                .Properties(p => p
+                    .Text("title")
+                    .Text("content")
+                    .DenseVector("embedding", dv => dv.Dims(3).Similarity(Elastic.Clients.Elasticsearch.Mapping.DenseVectorSimilarity.Cosine))
+                )
+            )
+        );
+
+        await Client.IndexAsync(new
+        {
+            title = "Document about cats",
+            content = "Cats are small domesticated animals",
+            embedding = new[] { 1.0f, 0.0f, 0.0f }
+        }, idx => idx.Index("test-vectors").Id("1"));
+
+        await Client.IndexAsync(new
+        {
+            title = "Document about dogs",
+            content = "Dogs are loyal companions",
+            embedding = new[] { 0.0f, 1.0f, 0.0f }
+        }, idx => idx.Index("test-vectors").Id("2"));
+
+        await Client.IndexAsync(new
+        {
+            title = "Another cat document",
+            content = "Kittens are young cats",
+            embedding = new[] { 0.9f, 0.1f, 0.0f }
+        }, idx => idx.Index("test-vectors").Id("3"));
+
+        await Client.Indices.RefreshAsync("test-vectors");
     }
 
     public async Task DisposeAsync()

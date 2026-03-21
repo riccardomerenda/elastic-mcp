@@ -13,6 +13,14 @@ public class ElasticMcpOptions
     public List<string> AllowedIndices { get; set; } = [];
     public List<string> DeniedIndices { get; set; } = [];
     public List<string> RedactedFields { get; set; } = [];
+    public SemanticSearchOptions SemanticSearch { get; set; } = new();
+}
+
+public class SemanticSearchOptions
+{
+    public string DefaultVectorField { get; set; } = "embedding";
+    public int DefaultK { get; set; } = 10;
+    public int DefaultNumCandidates { get; set; } = 100;
 }
 
 public class AuthenticationOptions

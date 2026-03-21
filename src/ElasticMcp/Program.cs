@@ -19,12 +19,13 @@ builder.Services
         options.ServerInfo = new()
         {
             Name = "ElasticMcp",
-            Version = "0.2.0"
+            Version = "0.3.0"
         };
     })
     .WithStdioServerTransport()
     .WithToolsFromAssembly()
-    .WithResourcesFromAssembly();
+    .WithResourcesFromAssembly()
+    .WithPromptsFromAssembly();
 
 // MCP stdio transport: stdout is reserved for JSON-RPC, logs must go to stderr
 builder.Logging.AddConsole(options =>

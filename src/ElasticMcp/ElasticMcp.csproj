@@ -6,6 +6,20 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <RootNamespace>ElasticMcp</RootNamespace>
+
+    <!-- NuGet dotnet tool packaging -->
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>elastic-mcp</ToolCommandName>
+    <PackageId>ElasticMcp</PackageId>
+    <Version>0.3.0</Version>
+    <Authors>Riccardo Merenda</Authors>
+    <Description>MCP server that lets AI agents query Elasticsearch using natural language. Supports full-text search, aggregations, semantic vector search, and more.</Description>
+    <PackageProjectUrl>https://github.com/riccardomerenda/elastic-mcp</PackageProjectUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageTags>mcp;elasticsearch;ai;llm;claude;semantic-search;dotnet-tool</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/riccardomerenda/elastic-mcp</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
   </PropertyGroup>
 
   <ItemGroup>
@@ -16,6 +30,10 @@
 
   <ItemGroup>
     <Content Include="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="../../README.md" Pack="true" PackagePath="/" />
   </ItemGroup>
 
 </Project>
