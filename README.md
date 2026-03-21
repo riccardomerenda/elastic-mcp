@@ -186,25 +186,25 @@ You: "Show me the top error types in production logs from the last hour"
  ▼
 ┌─────────────────────────────────────────────────┐
 │  AI Client (Claude, Copilot, Cursor, ChatGPT)   │
-│  Reasons about the request, picks the right      │
-│  tool, builds structured parameters              │
+│  Reasons about the request, picks the right     │
+│  tool, builds structured parameters             │
 └────────────────────┬────────────────────────────┘
                      │  MCP (JSON-RPC over stdio
                      │  or Streamable HTTP)
                      ▼
 ┌─────────────────────────────────────────────────┐
-│  ElasticMCP Server                               │
-│                                                  │
-│  Translates structured params → Query DSL        │
-│  Executes against Elasticsearch                  │
-│  Returns formatted results                       │
-│                                                  │
-│  No LLM calls. Pure C# translation layer.        │
+│  ElasticMCP Server                              │
+│                                                 │
+│  Translates structured params → Query DSL       │
+│  Executes against Elasticsearch                 │
+│  Returns formatted results                      │
+│                                                 │
+│  No LLM calls. Pure C# translation layer.       │
 └────────────────────┬────────────────────────────┘
                      │  HTTPS
                      ▼
 ┌─────────────────────────────────────────────────┐
-│  Elasticsearch 9.x Cluster                       │
+│  Elasticsearch 9.x Cluster                      │
 └─────────────────────────────────────────────────┘
 ```
 
