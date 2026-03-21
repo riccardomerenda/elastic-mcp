@@ -6,6 +6,9 @@
 # dotenv files
 .env
 
+# VS auto-generated solution file (project uses .slnx)
+ElasticMCP.sln
+
 # User-specific files
 *.rsuser
 *.suo
