@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/ElasticMcp.Http/ElasticMcp.Http.csproj" />
     <Project Path="src/ElasticMcp/ElasticMcp.csproj" />
   </Folder>
   <Folder Name="/tests/">
