@@ -115,6 +115,47 @@ foreach ($u in $users) {
 Invoke-RestMethod -Uri "$EsUrl/_bulk" -Method Post -Body $bulk -ContentType "application/x-ndjson" | Out-Null
 Write-Host "  $($users.Count) users created" -ForegroundColor Green
 
+# ── 4. Knowledge Base (vector data for semantic search) ───────────
+Write-Host "Seeding 'knowledge-base' index with vector embeddings..." -ForegroundColor Cyan
+
+# Create index with dense_vector mapping (384 dims simulated with 3 dims for demo)
+$mapping = @{
+    mappings = @{
+        properties = @{
+            title = @{ type = "text" }
+            content = @{ type = "text" }
+            category = @{ type = "keyword" }
+            embedding = @{ type = "dense_vector"; dims = 3; similarity = "cosine" }
+        }
+    }
+} | ConvertTo-Json -Depth 5
+
+try { Invoke-RestMethod -Uri "$EsUrl/knowledge-base" -Method Delete | Out-Null } catch {}
+Invoke-RestMethod -Uri "$EsUrl/knowledge-base" -Method Put -Body $mapping -ContentType "application/json" | Out-Null
+
+$vectorDocs = @(
+    @{ title = "Introduction to Elasticsearch"; content = "Elasticsearch is a distributed search and analytics engine built on Apache Lucene"; category = "search"; embedding = @(0.9, 0.1, 0.0) },
+    @{ title = "Understanding Vector Search"; content = "Vector search uses mathematical representations of content to find semantically similar documents"; category = "search"; embedding = @(0.8, 0.2, 0.1) },
+    @{ title = "Machine Learning Basics"; content = "Machine learning algorithms learn patterns from data to make predictions or decisions"; category = "ml"; embedding = @(0.1, 0.9, 0.0) },
+    @{ title = "Neural Networks Explained"; content = "Neural networks are computing systems inspired by biological neural networks in the brain"; category = "ml"; embedding = @(0.2, 0.8, 0.1) },
+    @{ title = "Cloud Computing Overview"; content = "Cloud computing delivers computing services over the internet including servers storage and databases"; category = "cloud"; embedding = @(0.0, 0.1, 0.9) },
+    @{ title = "Kubernetes for Beginners"; content = "Kubernetes is an open-source container orchestration platform for automating deployment and scaling"; category = "cloud"; embedding = @(0.1, 0.2, 0.8) },
+    @{ title = "Natural Language Processing"; content = "NLP enables computers to understand interpret and generate human language"; category = "ml"; embedding = @(0.3, 0.7, 0.1) },
+    @{ title = "Full-Text Search Techniques"; content = "Full-text search examines all words in documents to find matches for search criteria"; category = "search"; embedding = @(0.85, 0.15, 0.05) }
+)
+
+$bulk = ""
+$id = 1
+foreach ($doc in $vectorDocs) {
+    $json = $doc | ConvertTo-Json -Compress
+    $bulk += "{`"index`":{`"_index`":`"knowledge-base`",`"_id`":`"$id`"}}`n"
+    $bulk += "$json`n"
+    $id++
+}
+
+Invoke-RestMethod -Uri "$EsUrl/_bulk" -Method Post -Body $bulk -ContentType "application/x-ndjson" | Out-Null
+Write-Host "  $($vectorDocs.Count) knowledge base articles with embeddings created" -ForegroundColor Green
+
 # ── Refresh ─────────────────────────────────────────────────────────
 Invoke-RestMethod -Uri "$EsUrl/_refresh" -Method Post | Out-Null
 
@@ -126,4 +167,4 @@ Write-Host $stats
 Write-Host ""
 Write-Host "You can now run ElasticMCP and connect via MCP Inspector:" -ForegroundColor Green
 Write-Host "  1. dotnet run --project src/ElasticMcp/ElasticMcp.csproj" -ForegroundColor White
-Write-Host "  2. npx @anthropic-ai/mcp-inspector" -ForegroundColor White
+Write-Host "  2. npx @modelcontextprotocol/inspector" -ForegroundColor White

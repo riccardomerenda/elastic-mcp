@@ -100,6 +100,11 @@ public class SecurityGuard
     }
 
     /// <summary>
+    /// Exposes the semantic search configuration for tools that need it.
+    /// </summary>
+    public SemanticSearchOptions SemanticSearchConfig => _options.SemanticSearch;
+
+    /// <summary>
     /// Logs an audit entry for a tool invocation.
     /// </summary>
     public void AuditToolCall(string toolName, string index, string? query = null)

@@ -116,5 +116,11 @@ Configuration lives in `appsettings.json` under the `ElasticMcp` section, bound 
 
 - **v0.1 (Foundation)**: Project setup, CI/CD, ES connection, `search` + `count` tools, `cluster/health` + `cluster/indices` resources, stdio transport
 - **v0.2 (Core Tools)**: Remaining tools + resources, full config, SecurityGuard with all guardrails
-- **v0.3 (Semantic Search)**: `semantic_search` tool with kNN, prompt templates, NuGet + Docker publish
-- **v0.4 (Polish)**: HTTP server, sample data, OpenSearch compatibility, first release
+- **v0.3 (Semantic Search)** ✅: `semantic_search` tool with kNN, prompt templates (explore_index, log_analysis, semantic_qa), HTTP server with Streamable HTTP, NuGet dotnet tool packaging, Dockerfile, demo environment with vector data
+- **v0.4 (Polish)**: OpenSearch compatibility, additional prompts, performance optimizations
+
+## MCP SDK Constraints
+
+- Tool method parameters injected via DI must be types registered in the service container (e.g., `ElasticsearchClient`, `SecurityGuard`). `IOptions<T>` is NOT supported as a tool parameter — access config through an injected service instead.
+- Tool user-facing parameters must be JSON-serializable scalar types (`string`, `int`, `float`, `bool`). Array types like `float[]` are not supported — use `string` and parse manually.
+- If a tool has unsupported parameter types, the SDK silently skips it (no error, tool just doesn't appear).

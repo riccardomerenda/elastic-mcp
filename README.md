@@ -35,12 +35,26 @@ It's an [MCP](https://modelcontextprotocol.io/) server that gives AI agents — 
 - [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 - An Elasticsearch 9.x cluster (local or remote)
 
-### Run locally
+### Option 1 — Install as .NET tool
+
+```bash
+dotnet tool install -g ElasticMcp
+elastic-mcp
+```
+
+### Option 2 — Run from source
 
 ```bash
 git clone https://github.com/riccardomerenda/elastic-mcp.git
 cd elastic-mcp
 dotnet run --project src/ElasticMcp/ElasticMcp.csproj
+```
+
+### Option 3 — Docker (HTTP transport)
+
+```bash
+docker build -t elastic-mcp .
+docker run -p 8080:8080 -e ElasticMcp__Nodes__0=http://host.docker.internal:9200 elastic-mcp
 ```
 
 ### Connect to Claude Desktop
@@ -57,6 +71,16 @@ Add to your `claude_desktop_config.json`:
   }
 }
 ```
+
+### Connect via HTTP (remote / Streamable HTTP)
+
+Run the HTTP server:
+
+```bash
+dotnet run --project src/ElasticMcp.Http/ElasticMcp.Http.csproj
+```
+
+Then connect any MCP client to `http://localhost:5000/mcp` using Streamable HTTP transport.
 
 ### Connect to VS Code / Copilot
 
@@ -83,10 +107,19 @@ Add to `.vscode/mcp.json`:
 | Tool | Description |
 |------|-------------|
 | `search` | Full-text search with Lucene query syntax, pagination, and result size limits |
+| `semantic_search` | kNN vector search on `dense_vector` fields — find similar documents by embedding |
 | `count` | Count documents matching an optional query filter |
 | `aggregate` | Run aggregations — terms, date_histogram, avg, sum, min, max, cardinality |
 | `get_document` | Retrieve a single document by ID |
 | `explain_query` | Show the generated Query DSL without executing it |
+
+### Prompts — guided workflow templates
+
+| Prompt | Description |
+|--------|-------------|
+| `explore_index` | Step-by-step exploration: mapping, samples, counts, aggregations |
+| `log_analysis` | Identify error patterns, top services, time-based trends |
+| `semantic_qa` | Answer questions over a vector-indexed knowledge base via kNN |
 
 ### Resources — read-only context for the AI
 
@@ -117,7 +150,12 @@ ElasticMCP is configured via `appsettings.json` in the project root:
     "QueryTimeout": "30s",
     "AllowedIndices": ["logs-*", "documents-*"],
     "DeniedIndices": [".security-*", ".kibana*"],
-    "RedactedFields": ["password", "ssn", "credit_card"]
+    "RedactedFields": ["password", "ssn", "credit_card"],
+    "SemanticSearch": {
+      "DefaultVectorField": "embedding",
+      "DefaultK": 10,
+      "DefaultNumCandidates": 100
+    }
   }
 }
 ```
@@ -132,6 +170,9 @@ ElasticMCP is configured via `appsettings.json` in the project root:
 | `AllowedIndices` | `[]` | Index patterns the AI can access |
 | `DeniedIndices` | `[]` | Index patterns blocked from the AI |
 | `RedactedFields` | `[]` | Field names to strip from results and mappings |
+| `SemanticSearch.DefaultVectorField` | `embedding` | Default dense_vector field for kNN search |
+| `SemanticSearch.DefaultK` | `10` | Default number of nearest neighbors |
+| `SemanticSearch.DefaultNumCandidates` | `100` | Default candidate pool size for kNN |
 
 Environment variables override any setting (e.g., `ElasticMcp__Authentication__ApiKey`).
 
@@ -148,7 +189,8 @@ You: "Show me the top error types in production logs from the last hour"
 │  Reasons about the request, picks the right      │
 │  tool, builds structured parameters              │
 └────────────────────┬────────────────────────────┘
-                     │  MCP (JSON-RPC over stdio)
+                     │  MCP (JSON-RPC over stdio
+                     │  or Streamable HTTP)
                      ▼
 ┌─────────────────────────────────────────────────┐
 │  ElasticMCP Server                               │
@@ -202,19 +244,43 @@ dotnet test --filter "FullyQualifiedName~SearchToolTests"
 
 Integration tests use [Testcontainers](https://dotnet.testcontainers.org/) to spin up a real Elasticsearch 9.x instance in Docker — no mocks, no fakes.
 
+### Try it with demo data
+
+```powershell
+# Start Elasticsearch
+docker compose -f samples/docker-compose.yml up -d
+
+# Seed sample data (logs, products, users, vector embeddings)
+powershell -File samples/seed-data.ps1
+
+# Start the HTTP server
+dotnet run --project src/ElasticMcp.Http/ElasticMcp.Http.csproj
+
+# Open MCP Inspector
+npx @modelcontextprotocol/inspector
+# Connect to http://localhost:5000/mcp using Streamable HTTP
+```
+
 ### Project Structure
 
 ```
-src/ElasticMcp/
-├── Program.cs                 # MCP server entry point (stdio transport)
-├── Configuration/             # ElasticMcpOptions
-├── Tools/                     # search, count, aggregate, get_document, explain_query
-├── Resources/                 # cluster health, indices, mapping, settings, sample
-└── Services/                  # ES client registration, SecurityGuard
+src/
+├── ElasticMcp/                    # Main project (stdio transport)
+│   ├── Program.cs
+│   ├── Configuration/             # ElasticMcpOptions + SemanticSearchOptions
+│   ├── Tools/                     # search, semantic_search, count, aggregate, get_document, explain_query
+│   ├── Resources/                 # cluster health, indices, mapping, settings, sample
+│   ├── Prompts/                   # explore_index, log_analysis, semantic_qa
+│   └── Services/                  # ES client, SecurityGuard
+├── ElasticMcp.Http/               # HTTP server (Streamable HTTP transport)
 
 tests/
-├── ElasticMcp.Tests/          # Unit tests
-└── ElasticMcp.IntegrationTests/   # Integration tests (Testcontainers)
+├── ElasticMcp.Tests/              # Unit tests (no Docker needed)
+└── ElasticMcp.IntegrationTests/   # Integration tests (Testcontainers + real ES)
+
+samples/
+├── docker-compose.yml             # Single-node ES 9.x for local dev
+└── seed-data.ps1                  # Seed demo data (logs, products, users, vectors)
 ```
 
 ---
@@ -229,17 +295,15 @@ Project setup, CI/CD, `search` + `count` tools, cluster health + indices resourc
 
 `aggregate`, `get_document`, `explain_query` tools. Index mapping, settings, and sample resources. SecurityGuard with index allowlist/denylist, field redaction, result size clamping, and audit logging.
 
-### v0.3 — Semantic Search
+### v0.3 — Semantic Search ✅
 
-- `semantic_search` tool with kNN vector search
-- Prompt templates for guided workflows
-- NuGet package + Docker image
+`semantic_search` tool with kNN vector search on `dense_vector` fields. Three prompt templates (`explore_index`, `log_analysis`, `semantic_qa`). HTTP server with Streamable HTTP transport. NuGet dotnet tool packaging. Dockerfile for containerized deployment. Demo environment with Docker Compose and sample data including vector embeddings.
 
 ### v0.4 — Polish & Launch
 
-- HTTP transport (ASP.NET Core)
-- Docker-compose samples with demo data
 - OpenSearch compatibility
+- Additional prompt templates
+- Performance optimizations
 
 ---
 
@@ -251,6 +315,7 @@ Project setup, CI/CD, `search` + `count` tools, cluster health + indices resourc
 | MCP SDK | [ModelContextProtocol](https://www.nuget.org/packages/ModelContextProtocol) 1.1.0 |
 | ES Client | [Elastic.Clients.Elasticsearch](https://www.nuget.org/packages/Elastic.Clients.Elasticsearch) 9.3.3 |
 | Hosting | Microsoft.Extensions.Hosting |
+| HTTP Transport | ASP.NET Core + ModelContextProtocol.AspNetCore |
 | Testing | xUnit + Testcontainers |
 | CI/CD | GitHub Actions |
 

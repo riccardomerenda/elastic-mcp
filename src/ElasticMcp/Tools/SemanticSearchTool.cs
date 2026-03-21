@@ -1,9 +1,7 @@
 using System.ComponentModel;
 using System.Text.Json;
 using Elastic.Clients.Elasticsearch;
-using ElasticMcp.Configuration;
 using ElasticMcp.Services;
-using Microsoft.Extensions.Options;
 using ModelContextProtocol.Server;
 
 namespace ElasticMcp.Tools;
@@ -17,12 +15,11 @@ public class SemanticSearchTool
     public static async Task<string> SemanticSearch(
         ElasticsearchClient client,
         SecurityGuard guard,
-        IOptions<ElasticMcpOptions> options,
         [Description("The Elasticsearch index name or pattern")] string index,
-        [Description("The query vector as a JSON array of floats, e.g. [0.1, 0.2, ...]")] float[] query_vector,
-        [Description("The dense_vector field to search (default from config)")] string? vector_field = null,
-        [Description("Number of nearest neighbors to return (default from config)")] int? k = null,
-        [Description("Number of candidates to consider (default from config)")] int? num_candidates = null,
+        [Description("The query vector as a JSON array of floats, e.g. '[0.1, 0.2, 0.3]'")] string query_vector,
+        [Description("The dense_vector field to search (default: 'embedding')")] string? vector_field = null,
+        [Description("Number of nearest neighbors to return (default: 10)")] int? k = null,
+        [Description("Number of candidates to consider (default: 100)")] int? num_candidates = null,
         [Description("Optional query string to pre-filter documents before kNN")] string? filter_query = null,
         [Description("Minimum similarity threshold (optional)")] float? similarity = null,
         CancellationToken cancellationToken = default)
@@ -30,14 +27,26 @@ public class SemanticSearchTool
         var accessError = guard.ValidateIndexAccess(index);
         if (accessError != null) return accessError;
 
-        var opts = options.Value;
-        var resolvedField = vector_field ?? opts.SemanticSearch.DefaultVectorField;
-        var resolvedK = k ?? opts.SemanticSearch.DefaultK;
-        var resolvedCandidates = num_candidates ?? opts.SemanticSearch.DefaultNumCandidates;
+        // Parse the query vector from JSON string
+        float[] vectorArray;
+        try
+        {
+            vectorArray = JsonSerializer.Deserialize<float[]>(query_vector)
+                ?? throw new JsonException("Parsed vector is null");
+        }
+        catch (JsonException)
+        {
+            return "Error: query_vector must be a valid JSON array of floats, e.g. '[0.1, 0.2, 0.3]'";
+        }
+
+        var config = guard.SemanticSearchConfig;
+        var resolvedField = vector_field ?? config.DefaultVectorField;
+        var resolvedK = k ?? config.DefaultK;
+        var resolvedCandidates = num_candidates ?? config.DefaultNumCandidates;
         var clampedSize = guard.ClampResultSize(resolvedK);
 
         guard.AuditToolCall("semantic_search", index,
-            $"knn field={resolvedField} k={resolvedK} vector_dims={query_vector.Length}");
+            $"knn field={resolvedField} k={resolvedK} vector_dims={vectorArray.Length}");
 
         var response = await client.SearchAsync<JsonElement>(s =>
         {
@@ -46,7 +55,7 @@ public class SemanticSearchTool
              .Knn(knn =>
              {
                  knn.Field(resolvedField)
-                    .QueryVector(query_vector)
+                    .QueryVector(vectorArray)
                     .K(resolvedK)
                     .NumCandidates(resolvedCandidates);
 
